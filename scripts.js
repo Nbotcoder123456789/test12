@@ -1,5 +1,15 @@
+require('dotenv').config();
+
 // Cấu hình EmailJS
-emailjs.init('NzByR6ZyknP9EAPwq');
+emailjs.init('NzByR6ZyknP9EAPwq'); // Sử dụng User ID (Public Key) của bạn
+
+// GitHub repository details
+const githubRepo = {
+    owner: 'Nbotcoder123456789',
+    repo: 'test12',
+    branch: 'main',
+    token: process.env.GITHUB_TOKEN // Sử dụng biến môi trường
+};
 
 // Sự kiện gửi câu hỏi
 document.getElementById('qa-form').addEventListener('submit', function(event) {
@@ -54,22 +64,29 @@ document.getElementById('qa-form').addEventListener('submit', function(event) {
         // Lưu tệp HTML mới bằng cách sử dụng Blob và FileSaver.js
         saveFile(newFileName, questionHtml);
         saveFile(answerFileName, answerHtml);
-        
-        // Gửi thông báo email khi có câu hỏi mới
-        emailjs.send('service_3p5uxqw', 'template_74s7brqservice_3p5uxqw', {
-            to_name: 'Người hỏi đã được mã hóa', // Tên người nhận
-            from_name: 'Trần Đức Nam', // Tên bạn
-            message: `Câu hỏi mới: ${questionText}`,
-            question_url: window.location.href.replace(/\/[^/]*$/, '') + '/' + newFileName
-        })
-        .then(function(response) {
-            console.log('Email sent successfully:', response.status, response.text);
-        }, function(error) {
-            console.error('Failed to send email:', error);
-        });
-        
-        // Xóa nội dung ô nhập câu hỏi
-        questionInput.value = '';
+
+        // Đẩy tệp HTML mới lên GitHub
+        uploadToGitHub(newFileName, questionHtml)
+            .then(() => {
+                // Gửi thông báo email khi có câu hỏi mới
+                emailjs.send('service_3p5uxqw', 'template_74s7brq', {
+                    to_name: 'Người hỏi đã được mã hóa', // Tên người nhận
+                    from_name: 'Trần Đức Nam', // Tên bạn
+                    message: `Câu hỏi mới: ${questionText}`,
+                    question_url: `https://raw.githubusercontent.com/${githubRepo.owner}/${githubRepo.repo}/${githubRepo.branch}/${newFileName}`
+                })
+                .then(function(response) {
+                    console.log('Email sent successfully:', response.status, response.text);
+                }, function(error) {
+                    console.error('Failed to send email:', error);
+                });
+
+                // Xóa nội dung ô nhập câu hỏi
+                questionInput.value = '';
+            })
+            .catch(error => {
+                console.error('Failed to upload file to GitHub:', error);
+            });
     }
 });
 
@@ -80,4 +97,29 @@ function saveFile(fileName, content) {
     link.href = URL.createObjectURL(blob);
     link.download = fileName;
     link.click();
+}
+
+// Hàm đẩy tệp HTML lên GitHub
+async function uploadToGitHub(fileName, content) {
+    const url = `https://api.github.com/repos/${githubRepo.owner}/${githubRepo.repo}/contents/${fileName}`;
+    const base64Content = btoa(unescape(encodeURIComponent(content))); // Mã hóa nội dung tệp thành Base64
+    
+    const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `token ${githubRepo.token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            message: `Add ${fileName}`,
+            content: base64Content,
+            branch: githubRepo.branch
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to upload file to GitHub: ${response.statusText}`);
+    } else {
+        console.log('File uploaded to GitHub successfully');
+    }
 }
