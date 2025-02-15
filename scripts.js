@@ -1,4 +1,4 @@
-require('dotenv').config();
+
 
 // Cấu hình EmailJS
 emailjs.init('NzByR6ZyknP9EAPwq'); // Sử dụng User ID (Public Key) của bạn
@@ -8,7 +8,8 @@ const githubRepo = {
     owner: 'Nbotcoder123456789',
     repo: 'test12',
     branch: 'main',
-    token: process.env.GITHUB_TOKEN // Sử dụng biến môi trường
+    token: GITHUB_TOKEN=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
+ // Sử dụng biến môi trường
 };
 
 // Sự kiện gửi câu hỏi
